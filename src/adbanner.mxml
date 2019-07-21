@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Application xmlns:mx="http://www.adobe.com/2006/mxml"
+				applicationComplete="getDomain()" 
+				backgroundColor="#FFFFFF" layout="vertical" themeColor="haloBlue"
+				viewSourceURL="srcview/index.html">
+
+    <mx:RemoteObject id="ROCFC"
+     destination="ColdFusion" 
+	 endpoint="{_remoteGateway}"
+	 source="{_cfcPath}"
+     result="my_CFC_handler(event.result)"
+     fault="Alert.show(event.fault.faultDetail.toString() + '\n' + event.fault.faultString, 'Alert');" showBusyCursor="true" />
+
+    <mx:Script>
+        <![CDATA[
+            import flash.events.Event;
+            import flash.events.TimerEvent;
+            import flash.utils.Timer;
+            import flash.net.*;
+			import mx.core.Application;
+			import mx.utils.URLUtil;
+			import mx.controls.Alert;
+            
+            private var oBanners:Object = new Object();
+            private var theURL:String = new String();
+            private var theAlt:String = new String();
+            private var i:Number;
+			private var domain:String = "";
+
+            [Bindable] private var delay:Number = 5000;
+            [Bindable] private var theImage:String = new String();
+			[Bindable] private var _remoteGateway:String = "http://localhost/flex2gateway/";
+			[Bindable] private var _cfcPath:String = "flextraining.adbanner.components.testcfc";
+            
+			private function getDomain(): void {
+				domain = URLUtil.getServerName(Application.application.loaderInfo.url);
+				_remoteGateway = "http://" + domain + "/flex2gateway/";
+				//Alert.show(_remoteGateway);
+				if (domain == "labs.webhtml5.info") {
+					_cfcPath = "adbanner.components.testcfc";
+				}
+				//Alert.show(_cfcPath);
+				getBanners();
+			}
+
+			private function my_CFC_handler(result:Object):void {
+            	// initialize gc
+            	oBanners = null;
+                oBanners = result;
+                StartBanner();
+            }
+            
+            private function getBanners():void {
+                ROCFC.GetBannerFlex();
+            }
+    
+            private function StartBanner():void {
+                var myTimer:Timer = new Timer(delay, 20);
+                myTimer.addEventListener("timer", onTimer);
+                myTimer.addEventListener(TimerEvent.TIMER_COMPLETE, onTimerComplete);
+                myTimer.start();
+            }
+
+            private function onTimer(event:TimerEvent):void {
+                ShowBanner();
+            }
+
+            private function onTimerComplete(event:Event):void {
+                getBanners();
+            }
+
+			private function progressLoading():void {
+                var myTimer2:Timer = new Timer(50, 70);
+                myTimer2.addEventListener("timer", onTimer2);
+                myTimer2.addEventListener(TimerEvent.TIMER_COMPLETE, onTimerComplete2);
+                myTimer2.start();
+			}
+	
+            private function onTimer2(event:TimerEvent):void {
+				lblProgress.setStyle("color", "green");
+				lblProgress.setStyle("fontWeight", "bold");
+				lblProgress.text = "Loading Ads...";
+            }
+
+            private function onTimerComplete2(event:Event):void {
+				lblProgress.text = "";
+            }
+
+            private function ShowBanner():void {
+                //get random array index within range (note:  ActionScript arrays start with an array index of 0)
+                i = Math.round(Math.random()*(oBanners.aAdBanner.length-1));
+                //mx.controls.Alert.show(String(i));
+                theImage = oBanners.aAdBanner[i];
+                theURL = oBanners.aAdPath[i];
+                theAlt = oBanners.aAdAlt[i];
+                //Alert.show(theImage + "\n" + theURL + "\n" + theAlt);
+                imgAd.toolTip = theAlt + "\n\nClick to go to: " + theURL + "...";
+            }
+            
+            private function goThere():void {
+                var u:URLRequest = new URLRequest(theURL); 
+                navigateToURL(u,"_blank");
+            }
+            
+        ]]>
+    </mx:Script>
+    
+    
+    <!-- Style sheet used in this application -->
+    <mx:Style source="discovery.css"/>
+    
+	<mx:Label id="lblProgress" initialize="progressLoading()" color="#000000" fontSize="14" fontStyle="italic" fontWeight="bold" toolTip="A new ad every 5 seconds..."/>
+	<mx:Image id="imgAd" source="{theImage}" click="goThere();" useHandCursor="true" buttonMode="true" />
+     
+</mx:Application>
